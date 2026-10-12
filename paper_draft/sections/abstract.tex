@@ -1,0 +1,9 @@
+Chain-of-thought (\CoT) prompting is used by default, yet it costs far more output tokens than a direct answer.
+We test a concrete version of a common belief: that zero-shot \CoT lowers accuracy on pattern matching and factual recall by 5--15 points, raises it on logical deduction and arithmetic by 10--25 points, and helps fewer task categories as models grow.
+We run a paired comparison of direct answering and \CoT on five sizes of one model family (\qwen, 0.5B to 14B parameters) over 8 tasks and 2,350 items per model, with item-level bootstrap intervals and Holm-corrected McNemar tests.
+The hypothesis mostly fails.
+On pattern matching and factual recall the \CoT effect lies between $-2.2$ and $+3.8$ points and is never significantly negative.
+Arithmetic gains 48 to 85 points against a strict no-working baseline, and logical deduction ranges from $-6.9$ points at 0.5B to $+28.7$ points at 14B.
+The scale trend runs opposite to the hypothesis: the number of tasks that \CoT significantly helps rises from 2 of 8 to 4 of 8, and the share of previously correct answers that \CoT breaks falls with size in every category.
+In this setting the tax is the roughly 75$\times$ output-token cost for no measurable gain on classification; the only accuracy loss appears for the smallest model on multi-step logic, partly because its reasoning runs past the token budget.
+Our results cover one model family up to 14B parameters and do not speak to frontier-scale models.

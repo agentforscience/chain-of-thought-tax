@@ -1,0 +1,215 @@
+models: ['Qwen2.5-0.5B-Instruct', 'Qwen2.5-1.5B-Instruct', 'Qwen2.5-3B-Instruct', 'Qwen2.5-7B-Instruct', 'Qwen2.5-14B-Instruct'] | rows: 27244
+condition               cot  cot2  direct
+model                                    
+Qwen2.5-0.5B-Instruct  2350   800    2350
+Qwen2.5-1.5B-Instruct  2350   800    2350
+Qwen2.5-14B-Instruct   2350   544    2350
+Qwen2.5-3B-Instruct    2350   800    2350
+Qwen2.5-7B-Instruct    2350   800    2350
+
+== TASK LEVEL ==
+                  task                 model  acc_direct  acc_cot  delta   ci_lo  ci_hi  p_holm   sig  harm_rate  fix_rate
+              ag_news Qwen2.5-0.5B-Instruct      83.000   84.333  1.333   0.000  3.000   1.000  n.s.      0.402     9.804
+                 sst2 Qwen2.5-0.5B-Instruct      87.667   85.000 -2.667  -7.667  2.000   1.000  n.s.     11.407    59.459
+             triviaqa Qwen2.5-0.5B-Instruct      18.667   20.333  1.667  -1.333  4.667   1.000  n.s.     14.286     5.328
+          mmlu_recall Qwen2.5-0.5B-Instruct      48.667   42.667 -6.000 -13.000  1.000   1.000  n.s.     44.521    30.519
+bbh_logical_deduction Qwen2.5-0.5B-Instruct      24.000   18.800 -5.200 -12.000  2.000   1.000  n.s.     80.000    18.421
+          proofwriter Qwen2.5-0.5B-Instruct      33.333   24.667 -8.667 -17.000 -0.333   1.000  n.s.     94.000    34.000
+                gsm8k Qwen2.5-0.5B-Instruct       4.333   37.333 33.000  27.000 39.000   0.000 helps     61.538    37.282
+ synthetic_arithmetic Qwen2.5-0.5B-Instruct       0.000   62.333 62.333  56.667 67.667   0.000 helps        NaN    62.333
+              ag_news Qwen2.5-1.5B-Instruct      83.333   79.667 -3.667  -6.667 -0.667   0.638  n.s.      6.400    10.000
+                 sst2 Qwen2.5-1.5B-Instruct      92.000   93.333  1.333  -1.333  4.000   1.000  n.s.      2.536    45.833
+             triviaqa Qwen2.5-1.5B-Instruct      40.000   42.667  2.667  -2.000  7.333   1.000  n.s.     17.500    16.111
+          mmlu_recall Qwen2.5-1.5B-Instruct      69.667   66.667 -3.000  -8.333  2.000   1.000  n.s.     16.746    28.571
+bbh_logical_deduction Qwen2.5-1.5B-Instruct      26.400   33.200  6.800  -0.400 14.000   1.000  n.s.     50.000    27.174
+          proofwriter Qwen2.5-1.5B-Instruct      35.667   43.333  7.667   0.667 14.333   0.874  n.s.     42.056    35.233
+                gsm8k Qwen2.5-1.5B-Instruct       7.000   77.667 70.667  65.333 76.000   0.000 helps      9.524    76.703
+ synthetic_arithmetic Qwen2.5-1.5B-Instruct       0.000   83.333 83.333  79.000 87.333   0.000 helps        NaN    83.333
+              ag_news   Qwen2.5-3B-Instruct      81.333   83.333  2.000  -1.000  5.000   1.000  n.s.      2.869    23.214
+                 sst2   Qwen2.5-3B-Instruct      93.333   92.667 -0.667  -3.000  1.667   1.000  n.s.      2.500    25.000
+             triviaqa   Qwen2.5-3B-Instruct      47.333   48.667  1.333  -3.000  5.667   1.000  n.s.     14.085    15.190
+          mmlu_recall   Qwen2.5-3B-Instruct      75.000   77.333  2.333  -2.000  6.667   1.000  n.s.      8.444    34.667
+bbh_logical_deduction   Qwen2.5-3B-Instruct      43.600   50.000  6.400   0.000 13.200   1.000  n.s.     25.688    31.206
+          proofwriter   Qwen2.5-3B-Instruct      29.667   51.000 21.333  13.667 29.000   0.000 helps     48.315    50.711
+                gsm8k   Qwen2.5-3B-Instruct      14.000   89.000 75.000  70.000 79.675   0.000 helps      0.000    87.209
+ synthetic_arithmetic   Qwen2.5-3B-Instruct       0.000   94.333 94.333  91.667 97.000   0.000 helps        NaN    94.333
+              ag_news   Qwen2.5-7B-Instruct      88.333   87.333 -1.000  -3.000  1.000   1.000  n.s.      2.264     8.571
+                 sst2   Qwen2.5-7B-Instruct      93.667   94.333  0.667  -1.000  2.667   1.000  n.s.      1.068    26.316
+             triviaqa   Qwen2.5-7B-Instruct      55.000   62.000  7.000   2.992 11.333   0.061  n.s.      7.273    24.444
+          mmlu_recall   Qwen2.5-7B-Instruct      83.667   84.333  0.667  -2.667  3.667   1.000  n.s.      4.382    26.531
+bbh_logical_deduction   Qwen2.5-7B-Instruct      54.400   74.800 20.400  13.600 27.200   0.000 helps     13.235    60.526
+          proofwriter   Qwen2.5-7B-Instruct      31.333   64.333 33.000  26.000 40.000   0.000 helps     26.596    60.194
+                gsm8k   Qwen2.5-7B-Instruct      21.667   94.667 73.000  67.667 78.000   0.000 helps      3.077    94.043
+ synthetic_arithmetic   Qwen2.5-7B-Instruct       0.000   97.000 97.000  95.000 98.667   0.000 helps        NaN    97.000
+              ag_news  Qwen2.5-14B-Instruct      86.667   87.333  0.667  -1.333  2.667   1.000  n.s.      1.538    15.000
+                 sst2  Qwen2.5-14B-Instruct      95.667   95.000 -0.667  -2.000  0.667   1.000  n.s.      1.045     7.692
+             triviaqa  Qwen2.5-14B-Instruct      66.000   70.000  4.000   0.000  8.000   1.000  n.s.      6.566    24.510
+          mmlu_recall  Qwen2.5-14B-Instruct      86.333   88.000  1.667  -1.667  5.000   1.000  n.s.      3.861    36.585
+bbh_logical_deduction  Qwen2.5-14B-Instruct      64.400   86.800 22.400  15.600 28.800   0.000 helps      8.075    77.528
+          proofwriter  Qwen2.5-14B-Instruct      39.667   74.667 35.000  28.667 41.667   0.000 helps     11.765    65.746
+                gsm8k  Qwen2.5-14B-Instruct      32.000   97.333 65.333  60.000 70.667   0.000 helps      1.042    96.569
+ synthetic_arithmetic  Qwen2.5-14B-Instruct       0.333   98.333 98.000  96.333 99.333   0.000 helps      0.000    98.328
+
+== CATEGORY LEVEL ==
+          category                 model  acc_direct  acc_cot  delta   ci_lo  ci_hi  p_holm   sig  harm_rate  fix_rate  in_band  hyp_supported
+ pattern_matching Qwen2.5-0.5B-Instruct      85.333   84.667 -0.667  -3.167  1.833   1.000  n.s.      6.055    30.682    False          False
+   factual_recall Qwen2.5-0.5B-Instruct      33.667   31.500 -2.167  -5.833  1.500   1.000  n.s.     36.139    15.075    False          False
+logical_deduction Qwen2.5-0.5B-Instruct      28.667   21.733 -6.933 -12.333 -1.500   0.150  n.s.     88.750    26.410    False          False
+       arithmetic Qwen2.5-0.5B-Instruct       2.167   49.833 47.667  43.667 51.667   0.000 helps     61.538    50.085    False          False
+ pattern_matching Qwen2.5-1.5B-Instruct      87.667   86.500 -1.167  -3.167  0.833   1.000  n.s.      4.373    21.622    False          False
+   factual_recall Qwen2.5-1.5B-Instruct      54.833   54.667 -0.167  -3.500  3.171   1.000  n.s.     17.021    20.295    False          False
+logical_deduction Qwen2.5-1.5B-Instruct      31.033   38.267  7.233   2.200 12.267   0.063  n.s.     45.087    31.300    False          False
+       arithmetic Qwen2.5-1.5B-Instruct       3.500   80.500 77.000  73.667 80.333   0.000 helps      9.524    80.138    False          False
+ pattern_matching   Qwen2.5-3B-Instruct      87.333   88.000  0.667  -1.167  2.500   1.000  n.s.      2.672    23.684    False          False
+   factual_recall   Qwen2.5-3B-Instruct      61.167   63.000  1.833  -1.167  4.833   1.000  n.s.     10.627    21.459    False          False
+logical_deduction   Qwen2.5-3B-Instruct      36.633   50.500 13.867   8.767 18.833   0.000 helps     35.859    42.898     True           True
+       arithmetic   Qwen2.5-3B-Instruct       7.000   91.667 84.667  81.833 87.333   0.000 helps      0.000    91.039    False          False
+ pattern_matching   Qwen2.5-7B-Instruct      91.000   90.833 -0.167  -1.500  1.167   1.000  n.s.      1.648    14.815    False          False
+   factual_recall   Qwen2.5-7B-Instruct      69.333   73.167  3.833   1.167  6.500   0.084  n.s.      5.529    25.000    False          False
+logical_deduction   Qwen2.5-7B-Instruct      42.867   69.567 26.700  21.800 31.600   0.000 helps     18.696    60.312    False          False
+       arithmetic   Qwen2.5-7B-Instruct      10.833   95.833 85.000  82.167 87.667   0.000 helps      3.077    95.701    False          False
+ pattern_matching  Qwen2.5-14B-Instruct      91.167   91.167 -0.000  -1.167  1.167   1.000  n.s.      1.280    13.208    False          False
+   factual_recall  Qwen2.5-14B-Instruct      76.167   79.000  2.833   0.333  5.333   0.387  n.s.      5.033    27.972    False          False
+logical_deduction  Qwen2.5-14B-Instruct      52.033   80.733 28.700  24.167 33.300   0.000 helps      9.643    69.630    False          False
+       arithmetic  Qwen2.5-14B-Instruct      16.167   97.833 81.667  78.833 84.500   0.000 helps      1.031    97.614    False          False
+
+== # categories where CoT significantly helps / hurts (Holm 0.05) ==
+ sig                    helps  n.s.
+model                             
+Qwen2.5-0.5B-Instruct      1     3
+Qwen2.5-1.5B-Instruct      1     3
+Qwen2.5-3B-Instruct        2     2
+Qwen2.5-7B-Instruct        2     2
+Qwen2.5-14B-Instruct       2     2
+
+== # tasks where CoT significantly helps / hurts (Holm 0.05) ==
+ sig                    helps  n.s.
+model                             
+Qwen2.5-0.5B-Instruct      2     6
+Qwen2.5-1.5B-Instruct      2     6
+Qwen2.5-3B-Instruct        3     5
+Qwen2.5-7B-Instruct        4     4
+Qwen2.5-14B-Instruct       4     4
+
+== SCALE SLOPES (pp of delta per doubling of parameters) ==
+          category  slope_pp_per_doubling  ci_lo  ci_hi
+ pattern_matching                   0.18  -0.32   0.70
+   factual_recall                   1.18   0.34   2.02
+logical_deduction                   7.56   6.27   8.88
+       arithmetic                   6.66   5.74   7.55
+
+== CoT: share with explicit final-answer marker ==
+ model                  Qwen2.5-0.5B-Instruct  Qwen2.5-1.5B-Instruct  Qwen2.5-3B-Instruct  Qwen2.5-7B-Instruct  Qwen2.5-14B-Instruct
+task                                                                                                                               
+ag_news                                1.000                  0.960                1.000                1.000                 1.000
+sst2                                   0.997                  1.000                1.000                1.000                 1.000
+triviaqa                               1.000                  0.997                0.993                0.997                 1.000
+mmlu_recall                            0.997                  1.000                1.000                1.000                 1.000
+bbh_logical_deduction                  0.968                  0.996                1.000                1.000                 1.000
+proofwriter                            0.550                  0.880                0.950                0.997                 1.000
+gsm8k                                  0.980                  0.967                1.000                0.983                 0.997
+synthetic_arithmetic                   0.760                  0.990                1.000                0.997                 1.000
+
+== CoT: share truncated at token budget ==
+ model                  Qwen2.5-0.5B-Instruct  Qwen2.5-1.5B-Instruct  Qwen2.5-3B-Instruct  Qwen2.5-7B-Instruct  Qwen2.5-14B-Instruct
+task                                                                                                                               
+ag_news                                0.000                  0.000                0.000                0.000                   0.0
+sst2                                   0.003                  0.000                0.000                0.000                   0.0
+triviaqa                               0.003                  0.003                0.007                0.003                   0.0
+mmlu_recall                            0.003                  0.000                0.000                0.000                   0.0
+bbh_logical_deduction                  0.032                  0.004                0.000                0.000                   0.0
+proofwriter                            0.440                  0.107                0.050                0.003                   0.0
+gsm8k                                  0.010                  0.000                0.000                0.000                   0.0
+synthetic_arithmetic                   0.000                  0.010                0.000                0.003                   0.0
+
+== CoT: mean output tokens ==
+ model                  Qwen2.5-0.5B-Instruct  Qwen2.5-1.5B-Instruct  Qwen2.5-3B-Instruct  Qwen2.5-7B-Instruct  Qwen2.5-14B-Instruct
+task                                                                                                                               
+ag_news                                 68.0                   91.0                173.0                143.0                 181.0
+sst2                                   141.0                  118.0                155.0                159.0                 199.0
+triviaqa                                90.0                  142.0                174.0                126.0                 147.0
+mmlu_recall                            211.0                  199.0                235.0                207.0                 235.0
+bbh_logical_deduction                  353.0                  326.0                361.0                376.0                 355.0
+proofwriter                            684.0                  522.0                465.0                448.0                 363.0
+gsm8k                                  230.0                  246.0                302.0                269.0                 289.0
+synthetic_arithmetic                   162.0                  149.0                313.0                177.0                 246.0
+
+== Mean output tokens per item ==
+ condition                cot  direct  ratio
+model                                      
+Qwen2.5-0.5B-Instruct  239.9     3.3   73.1
+Qwen2.5-1.5B-Instruct  222.0     3.1   70.6
+Qwen2.5-3B-Instruct    270.5     3.1   87.0
+Qwen2.5-7B-Instruct    235.2     3.1   76.7
+Qwen2.5-14B-Instruct   249.6     3.1   80.9
+
+== SENSITIVITY (well-formed CoT outputs only) ==
+                 model          category  n_kept  delta_clean  ci_lo  ci_hi  delta   n
+Qwen2.5-0.5B-Instruct  pattern_matching     599        -0.67  -3.18   1.84  -0.67 600
+Qwen2.5-0.5B-Instruct    factual_recall     598        -2.17  -6.02   1.51  -2.17 600
+Qwen2.5-0.5B-Instruct logical_deduction     407         3.69  -3.75  11.10  -6.93 550
+Qwen2.5-0.5B-Instruct        arithmetic     522        46.56  42.28  50.94  47.67 600
+Qwen2.5-1.5B-Instruct  pattern_matching     588        -1.24  -3.42   0.81  -1.17 600
+Qwen2.5-1.5B-Instruct    factual_recall     599        -0.16  -3.66   3.18  -0.17 600
+Qwen2.5-1.5B-Instruct logical_deduction     513         9.10   3.91  14.20   7.23 550
+Qwen2.5-1.5B-Instruct        arithmetic     587        77.43  73.86  80.84  77.00 600
+  Qwen2.5-3B-Instruct  pattern_matching     600         0.67  -1.17   2.50   0.67 600
+  Qwen2.5-3B-Instruct    factual_recall     598         1.84  -1.18   4.85   1.83 600
+  Qwen2.5-3B-Instruct logical_deduction     535        15.66  10.60  20.76  13.87 550
+  Qwen2.5-3B-Instruct        arithmetic     600        84.67  81.83  87.33  84.67 600
+  Qwen2.5-7B-Instruct  pattern_matching     600        -0.17  -1.50   1.17  -0.17 600
+  Qwen2.5-7B-Instruct    factual_recall     599         3.85   1.17   6.68   3.83 600
+  Qwen2.5-7B-Instruct logical_deduction     549        26.76  21.85  31.73  26.70 550
+  Qwen2.5-7B-Instruct        arithmetic     594        85.10  82.24  87.82  85.00 600
+ Qwen2.5-14B-Instruct  pattern_matching     600        -0.00  -1.17   1.17  -0.00 600
+ Qwen2.5-14B-Instruct    factual_recall     600         2.83   0.17   5.33   2.83 600
+ Qwen2.5-14B-Instruct logical_deduction     550        28.70  24.17  33.33  28.70 550
+ Qwen2.5-14B-Instruct        arithmetic     599        81.61  78.76  84.45  81.67 600
+
+== HARMED ITEMS BY FAILURE MODE ==
+ mode                                     no_marker  truncated  wrong_answer
+model                 category                                             
+Qwen2.5-0.5B-Instruct arithmetic                 0          2             6
+                      factual_recall             0          0            73
+                      logical_deduction          1         48            93
+                      pattern_matching           0          0            31
+Qwen2.5-1.5B-Instruct arithmetic                 0          0             2
+                      factual_recall             0          0            56
+                      logical_deduction          0          9            69
+                      pattern_matching           0          0            23
+Qwen2.5-14B-Instruct  arithmetic                 0          0             1
+                      factual_recall             0          0            23
+                      logical_deduction          0          0            27
+                      pattern_matching           0          0             7
+Qwen2.5-3B-Instruct   factual_recall             0          0            39
+                      logical_deduction          0          7            64
+                      pattern_matching           0          0            14
+Qwen2.5-7B-Instruct   arithmetic                 0          0             2
+                      factual_recall             0          0            23
+                      logical_deduction          0          0            43
+                      pattern_matching           0          0             9
+
+== ROBUSTNESS (CoT wording 2, same items) ==
+                 model          category   n  delta_cot  delta_cot2  cot2_ci_lo  cot2_ci_hi  same_sign
+Qwen2.5-0.5B-Instruct  pattern_matching 200      -4.00       -2.50       -5.00       -0.50       True
+Qwen2.5-0.5B-Instruct    factual_recall 200      -0.50       -0.50       -6.00        5.00       True
+Qwen2.5-0.5B-Instruct logical_deduction 200       3.00        3.50       -5.00       12.00       True
+Qwen2.5-0.5B-Instruct        arithmetic 200      50.00       58.00       51.00       65.00       True
+Qwen2.5-1.5B-Instruct  pattern_matching 200      -1.50       -2.50       -5.00       -0.50       True
+Qwen2.5-1.5B-Instruct    factual_recall 200       4.00       -2.00       -7.50        3.50      False
+Qwen2.5-1.5B-Instruct logical_deduction 200       9.00        5.50       -3.00       14.00       True
+Qwen2.5-1.5B-Instruct        arithmetic 200      76.00       75.50       69.50       81.00       True
+  Qwen2.5-3B-Instruct  pattern_matching 200       1.50        3.50        0.50        7.00       True
+  Qwen2.5-3B-Instruct    factual_recall 200       4.00        3.50       -2.50        9.50       True
+  Qwen2.5-3B-Instruct logical_deduction 200      15.00       16.50        8.00       25.00       True
+  Qwen2.5-3B-Instruct        arithmetic 200      82.50       79.50       74.00       85.00       True
+  Qwen2.5-7B-Instruct  pattern_matching 200      -1.00        0.00       -2.00        2.00      False
+  Qwen2.5-7B-Instruct    factual_recall 200       4.50        3.00       -1.50        7.50       True
+  Qwen2.5-7B-Instruct logical_deduction 200      27.00       24.00       15.00       33.00       True
+  Qwen2.5-7B-Instruct        arithmetic 200      84.50       83.00       77.50       88.00       True
+ Qwen2.5-14B-Instruct  pattern_matching 178      -1.00       -2.28       -4.71       -0.50       True
+ Qwen2.5-14B-Instruct    factual_recall 175       3.17       -0.17       -4.00        3.50      False
+ Qwen2.5-14B-Instruct        arithmetic 191      80.27       76.62       70.68       82.16       True
+sign agreement: 0.842 | corr of deltas: 0.996
+
+wrote results/*.csv and figures/*.png

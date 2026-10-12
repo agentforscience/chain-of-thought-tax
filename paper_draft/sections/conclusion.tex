@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We tested whether zero-shot chain-of-thought prompting taxes accuracy on easy task types and helps less as models grow, using five sizes of \qwen on eight tasks.
+It does neither in this family.
+\CoT did not reduce accuracy on text classification or factual recall (effects between $-2.2$ and $+3.8$ points, none significantly negative), improved arithmetic by 48--85 points against a no-working baseline and logical deduction by up to 29 points, and helped more tasks, not fewer, as size grew.
+The tax we measure is the roughly 75$\times$ output-token cost for no gain on classification, plus an accuracy loss for the smallest model on multi-step logic that is not significant after correction and is tied in part to truncated outputs.
+
+The most valuable next step is to repeat the study on frontier models and a second open family, to test whether the shrinking \gsm benefit becomes a penalty at larger scale.
+Further steps are to add tasks built around implicit pattern learning, to run repeated passes so that harm and fix rates carry proper error bars, to add a concise no-prefill baseline, and to raise the token budget for the smallest models to separate ``cannot reason'' from ``ran out of room''.

@@ -1,0 +1,89 @@
+\section{Methodology}
+\label{sec:method}
+
+\para{Problem setup.}
+For a model $m$, a task $t$ and an item $i$, let $y^{\mathrm{dir}}_{m,t,i}, y^{\mathrm{cot}}_{m,t,i} \in \{0,1\}$ be correctness under the direct and \CoT conditions.
+The \CoT effect on a task is the paired difference $\Delta_{m,t} = \frac{1}{n_t}\sum_i (y^{\mathrm{cot}}_{m,t,i} - y^{\mathrm{dir}}_{m,t,i})$, reported in accuracy points.
+The category-level effect is the unweighted mean of the two task-level effects in that category.
+We read the hypothesised ``5--15\%'' and ``10--25\%'' as accuracy points.
+
+\para{Models.}
+We use \qwen at 0.5B, 1.5B, 3B, 7B and 14B parameters \cite{qwen2024qwen25}, run locally with bfloat16 weights and greedy decoding, zero-shot, with the system prompt ``You are a helpful assistant.''
+We originally planned to use API models; no API key was available, so we ran open-weight models instead.
+This removes frontier models from the study but gives a cleaner scale comparison: one family and one training recipe.
+
+\para{Prompt conditions.}
+Each item ends with an answer-format hint (\eg ``The answer must be exactly one of: World, Sports, Business, Sci/Tech.'').
+A condition adds one instruction suffix (\tabref{tab:conditions}).
+In \direct we prefill the assistant turn with ``Answer:'' and cap generation at 24 tokens, so the model cannot write any reasoning; we choose this strict baseline because it gives the cleanest contrast with \CoT.
+\cottwo is a paraphrase used only for a robustness check on the first 100 items of each task.
+Greedy decoding has no sampling seed, so prompt wording is the nuisance variable we check.
+
+\begin{table}[t]
+    \centering
+    \caption{Prompt conditions. The suffix follows the item text and its answer-format hint.}
+    \label{tab:conditions}
+    \small
+    \begin{tabular}{@{}lp{8.2cm}cc@{}}
+        \toprule
+        \textbf{Condition} & \textbf{Instruction suffix} & \textbf{Prefill} & \textbf{Max tokens} \\
+        \midrule
+        \direct & Give only the final answer, with no explanation or reasoning. Respond in the format ``Answer: <answer>''. & ``Answer:'' & 24 \\
+        \cotc & Think step by step and write out your reasoning. Then finish with a final line in the format ``Answer: <answer>''. & none & 1024 \\
+        \cottwo & Before answering, carefully work through the problem and explain your thought process. When you are done, end your response with one last line of the form ``Answer: <answer>''. & none & 1024 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\para{Tasks.}
+We use two tasks for each of four categories (\tabref{tab:tasks}), sampling 300 items per task with a fixed seed; the BBH task has 250 items and we use all of them, for 2,350 items in total.
+\mmlu pools seven recall-heavy MMLU subjects (miscellaneous, world religions, high school geography, prehistory, anatomy, nutrition and astronomy).
+\synth consists of three-operation integer expressions such as $(125 + 859) \times 4 - 93$ that we generate for this study, so they cannot appear verbatim in a training set.
+Assigning tasks to categories is a judgement call; we return to this in \secref{sec:limitations}.
+
+\begin{table}[t]
+    \centering
+    \caption{Tasks. Chance is the accuracy of uniform guessing.}
+    \label{tab:tasks}
+    \small
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}lllr@{}}
+        \toprule
+        \textbf{Category} & \textbf{Task} & \textbf{Answer format} & \textbf{Chance} \\
+        \midrule
+        Pattern matching & \agnews topic \cite{zhang2015character} & 4 labels & 25\% \\
+                         & \sst sentiment \cite{socher2013recursive} & 2 labels & 50\% \\
+        \midrule
+        Factual recall   & \triviaqa, no context \cite{joshi2017triviaqa} & free-form, alias match & $\approx$0\% \\
+                         & \mmlu, 7 subjects \cite{hendrycks2021measuring} & 4-way multiple choice & 25\% \\
+        \midrule
+        Logical deduction & \bbh, five objects \cite{suzgun2023challenging} & 5-way multiple choice & 20\% \\
+                          & \proofwriter, depth 5 \cite{tafjord2021proofwriter} & True / False / Unknown & 33\% \\
+        \midrule
+        Arithmetic       & \gsm \cite{cobbe2021training} & number & $\approx$0\% \\
+                         & \synth (ours) & integer & $\approx$0\% \\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+\para{Scoring.}
+We take the answer to be the text after the last ``Answer:'' or ``answer is'' marker (the first line of output in \direct).
+Classification outputs must match exactly one allowed label, multiple-choice outputs must give the right letter, numbers are compared numerically, and \triviaqa uses standard normalisation with alias containment.
+A \CoT response with no parsable answer counts as wrong.
+We audited extraction by reading samples of wrong-scored \CoT answers for each task.
+The audit found one artefact, which we fixed before computing the reported numbers: the 0.5B model sometimes wrote ``Science/Tech'' for the label ``Sci/Tech'', in both conditions.
+
+\para{Metrics.}
+Besides accuracy and $\Delta$, we report the harm rate $P(y^{\mathrm{cot}}=0 \mid y^{\mathrm{dir}}=1)$ and the fix rate $P(y^{\mathrm{cot}}=1 \mid y^{\mathrm{dir}}=0)$, the share of \CoT responses that lack an answer marker or hit the token budget, and mean output tokens.
+
+\para{Statistics.}
+We compute 95\% bootstrap confidence intervals for $\Delta$ over items (10,000 resamples, stratified by task) and exact McNemar tests \cite{mcnemar1947note}, with Holm correction \cite{holm1979simple} applied separately to the 40 task-level tests and the 20 category-level tests at $\alpha = 0.05$.
+We count an H1 or H2 cell as supported if its point estimate lies in the hypothesised range and the cell is Holm-significant.
+For H3 we fit the slope of the category-level $\Delta$ on $\log_2$(parameters), with a confidence interval from the item bootstrap, and we count the tasks with a significant benefit at each size.
+
+\para{Deviations from the pre-run plan.}
+The analysis plan was written before the runs. Two things differ from it.
+The plan set the \CoT budget at 640 tokens; the runs used 1,024.
+The plan judged H1 and H2 by whether the bootstrap interval excluded zero; we report the stricter Holm-corrected criterion.
+The second change does not alter any verdict: under either criterion the same single cell is supported.

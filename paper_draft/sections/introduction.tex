@@ -1,0 +1,43 @@
+\section{Introduction}
+\label{sec:intro}
+
+Asking a language model to ``think step by step'' is now a default prompting habit.
+The habit has a visible price: a reasoning trace takes far more output tokens than a bare answer.
+If the trace also lowered accuracy on some kinds of task, practitioners would be paying twice, and routing prompts by task type would be worth real engineering effort.
+
+There is reason to suspect such a cost.
+Chain-of-thought (\CoT) gains concentrate on mathematical and symbolic problems \cite{wei2022chain,kojima2022large,sprague2024cot}, and \CoT can hurt on tasks where deliberation also hurts people, such as implicit pattern learning \cite{liu2024mind}.
+A natural extrapolation is that \CoT taxes tasks that depend on recognition or recall, and that the tax grows with model size because larger models do more of the work internally.
+
+{\bf Does zero-shot \CoT actually cost accuracy on easy task types, and does its benefit shrink with scale?}
+We test a specific, falsifiable form of this claim, split into three parts.
+Let $\Delta = \mathrm{acc}(\cotc) - \mathrm{acc}(\direct)$, in accuracy points.
+{\bf H1}: $\Delta \in [-15,-5]$ for pattern matching and factual recall.
+{\bf H2}: $\Delta \in [+10,+25]$ for logical deduction and arithmetic.
+{\bf H3}: fewer categories benefit as parameter count grows.
+
+Existing evidence does not settle these questions for two reasons.
+First, most comparisons mix model families, so scale is confounded with training data and recipe.
+Second, an accuracy difference near zero does not distinguish ``\CoT changes nothing'' from ``\CoT breaks some answers and repairs as many others''.
+
+We address both.
+We compare direct answering and \CoT on five sizes of a single family, \qwen from 0.5B to 14B parameters, on eight tasks in four categories (2,350 items per model).
+Every item is answered under both conditions, so we report paired statistics, and alongside the accuracy difference we report a \emph{harm rate}, $P(\text{\CoT wrong}\mid\text{direct right})$, and a \emph{fix rate}, $P(\text{\CoT right}\mid\text{direct wrong})$.
+
+The hypothesis mostly fails.
+On pattern matching and factual recall, $\Delta$ ranges from $-2.2$ to $+3.8$ points across ten model-by-category cells; none is significantly negative and none falls in the hypothesised range.
+\CoT helps arithmetic by 48 to 85 points, far above the hypothesised range, because answering arithmetic with no visible working is near 0\% accurate.
+On logical deduction $\Delta$ climbs from $-6.9$ points at 0.5B to $+28.7$ points at 14B.
+Only 1 of 20 cells is both inside its hypothesised range and significant.
+The scale trend is the reverse of H3: \CoT significantly helps 2 of 8 tasks at 0.5B and 4 of 8 at 14B, and harm rates fall with size in every category.
+What \CoT does cost is tokens: 71--87$\times$ more output for no measurable gain on classification.
+
+In summary, our contributions are:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item We run a within-family scale ladder (five sizes, a roughly 30$\times$ parameter range) that separates the effect of scale on \CoT from differences between model families.
+    \item We show that zero-shot \CoT carries no measurable accuracy tax on text classification or factual recall in this family, and bound any such tax below 5 points for nine of ten cells.
+    \item We show that the benefit of \CoT grows with scale on logical deduction ($+7.6$ points per doubling of parameters), and that harm rates fall with scale in all four categories.
+    \item We trace the one negative cell (the 0.5B model on logical deduction) in part to runaway reasoning that exhausts the token budget, and we document the limits of our evidence, including run-to-run churn and an incomplete robustness check.
+\end{itemize}
+
+We review related work in \secref{sec:related}, describe the setup in \secref{sec:method}, present results in \secref{sec:results}, and discuss interpretation and limitations in \secref{sec:discussion}.

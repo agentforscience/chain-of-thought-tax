@@ -1,0 +1,44 @@
+{
+  "seed": 42,
+  "timestamp": "2026-10-09T15:25:02.456111",
+  "python": "3.11.14",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.19.0",
+  "numpy": "2.4.6",
+  "pandas": "3.0.6",
+  "scipy": "1.17.1",
+  "statsmodels": "0.15.0",
+  "gpu": "NVIDIA RTX A6000 (48 GB), shared with other jobs",
+  "models": {
+    "Qwen/Qwen2.5-0.5B-Instruct": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "Qwen/Qwen2.5-1.5B-Instruct": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+    "Qwen/Qwen2.5-3B-Instruct": "aa8e72537993ba99e69dfaafa59ed015b17504d1",
+    "Qwen/Qwen2.5-7B-Instruct": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "Qwen/Qwen2.5-14B-Instruct": "cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8"
+  },
+  "decoding": {
+    "do_sample": false,
+    "dtype": "bfloat16",
+    "system_prompt": "You are a helpful assistant."
+  },
+  "conditions": {
+    "direct": {
+      "suffix": "Give only the final answer, with no explanation or reasoning. Respond in the format \"Answer: <answer>\".",
+      "assistant_prefill": "Answer:",
+      "max_new_tokens": 24
+    },
+    "cot": {
+      "suffix": "Think step by step and write out your reasoning. Then finish with a final line in the format \"Answer: <answer>\".",
+      "assistant_prefill": "",
+      "max_new_tokens": 1024
+    },
+    "cot2": {
+      "suffix": "Before answering, carefully work through the problem and explain your thought process. When you are done, end your response with one last line of the form \"Answer: <answer>\".",
+      "assistant_prefill": "",
+      "max_new_tokens": 1024
+    }
+  },
+  "n_per_task": 300,
+  "n_bbh": 250,
+  "cot2_subset": "first 100 items per task"
+}

@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "stages": {
+    "resource_finder": {
+      "success": true,
+      "skipped": true
+    },
+    "experiment_runner": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 10667.44453716278,
+      "log_file": "/data/summereunann/neurico-workspaces/the_chain_of_thought_tax__meas_20261009_122938_893e5934/logs/execution_claude.log",
+      "transcript_file": "/data/summereunann/neurico-workspaces/the_chain_of_thought_tax__meas_20261009_122938_893e5934/logs/execution_claude_transcript.jsonl",
+      "background_processes_terminated": false
+    }
+  },
+  "work_dir": "/data/summereunann/neurico-workspaces/the_chain_of_thought_tax__meas_20261009_122938_893e5934"
+}

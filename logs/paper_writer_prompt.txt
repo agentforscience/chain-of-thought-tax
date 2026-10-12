@@ -1,0 +1,750 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at .claude/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. VERIFY COMMAND TEMPLATES: Command templates (math.tex, general.tex, macros.tex) are pre-copied to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# The Chain-of-Thought Tax: When Do Reasoning Traces Hurt Rather Than Help?
+
+## 1. Executive Summary
+
+**Question.** Does zero-shot chain-of-thought (CoT) prompting lower accuracy on pattern-matching and
+factual-recall tasks by 5-15 points, raise it on logical deduction and arithmetic by 10-25 points, and help
+fewer task categories as models get larger?
+
+**Answer.** Mostly no. Across five sizes of Qwen2.5-Instruct (0.5B to 14B parameters), 8 tasks and 2,350
+items per model:
+
+- **There was no accuracy tax on pattern matching or factual recall.** The CoT effect ranged from -2.2 to
+  +3.8 points across the ten model-by-category cells; none was significantly negative, and none fell in
+  the hypothesised -5 to -15 range.
+- **CoT helped on logic and arithmetic, but not by the hypothesised amount.** Arithmetic gained 48 to 85
+  points (far above the 10-25 range) because answering arithmetic with no visible working is near 0%.
+  Logical deduction ranged from -7 points (0.5B) to +29 points (14B).
+- **The scale trend ran opposite to the hypothesis.** The number of tasks with a significant CoT benefit
+  rose from 2 of 8 (0.5B, 1.5B) to 4 of 8 (7B, 14B). The share of previously-correct answers that CoT
+  broke fell with size in every category.
+
+**Practical implication.** In this model family the cost of CoT on "easy" categories is tokens, not
+accuracy: about 75x more output tokens for no measurable gain on classification and at most a few points
+on recall. The real accuracy risk is at the small end: the 0.5B model lost ground on logical deduction,
+largely because its reasoning ran past the token budget without reaching an answer.
+
+Scope: one model family, up to 14B parameters, zero-shot, one main prompt pair. The results do not speak
+to frontier-scale API models, which could not be tested (no API key was available in the environment).
+
+## 2. Research Question & Motivation
+
+**Hypothesis as given.** "Chain-of-thought prompting degrades performance on pattern matching and factual
+recall tasks by 5-15% while improving logical deduction and arithmetic by 10-25%, with the crossover point
+shifting toward fewer beneficial categories as model scale increases, suggesting that larger models
+internalize reasoning steps that explicit traces disrupt."
+
+I split it into three testable parts (percentages read as accuracy points; relative changes are in
+`results/category_level.csv`):
+
+- **H1**: delta = acc(CoT) - acc(direct) is in [-15, -5] for pattern matching and factual recall.
+- **H2**: delta is in [+10, +25] for logical deduction and arithmetic.
+- **H3**: fewer categories benefit as parameter count grows.
+
+The final clause (larger models "internalise" reasoning that traces disrupt) is a mechanism claim that
+accuracy data cannot test directly; section 5 says what the data are and are not consistent with.
+
+**Why it matters.** CoT is used by default and costs far more output tokens. If it also cost accuracy on
+some task types, routing prompts by task type would be worth real engineering effort.
+
+**Literature context.** No literature review was pre-gathered for this run (the resource-finder stage was
+skipped), so this context is from memory rather than a fresh systematic review. Wei et al. (2022) and
+Kojima et al. (2022) showed CoT gains mainly on arithmetic and symbolic tasks. Sprague et al. (2024) found
+in a large meta-analysis that CoT gains concentrate on math and symbolic reasoning, with little benefit
+elsewhere. Liu et al. (2024) showed CoT can actively hurt on tasks where deliberation hurts humans, such
+as implicit pattern learning. Most such comparisons mix model families, so scale is confounded with
+training recipe. The contribution here is a within-family scale ladder with paired item-level statistics
+that separate "no gain" from "breaks answers the model otherwise gets right".
+
+## 3. Experimental Setup
+
+### Deviation from the default setup
+The instructions called for API models via OpenRouter. `OPENROUTER_KEY` and all other provider keys were
+unset, so I ran real open-weight models locally instead. This costs external validity (no frontier models)
+but gives a cleaner scale comparison: one family, one training recipe, a 30x parameter range.
+
+### Models
+Qwen/Qwen2.5-{0.5B, 1.5B, 3B, 7B, 14B}-Instruct, loaded in bfloat16 with Hugging Face `transformers`
+5.19.0 / `torch` 2.14.1. Snapshot hashes are in `results/config.json`. Greedy decoding
+(`do_sample=False`), system prompt "You are a helpful assistant.", zero-shot.
+
+### Prompt conditions
+Each item's text ends with an answer-format hint (e.g. "The answer must be exactly one of: World, Sports,
+Business, Sci/Tech."). The condition adds one suffix:
+
+| Condition | Suffix | Assistant prefill | Max new tokens |
+|---|---|---|---|
+| Direct | `Give only the final answer, with no explanation or reasoning. Respond in the format "Answer: <answer>".` | `Answer:` | 24 |
+| CoT | `Think step by step and write out your reasoning. Then finish with a final line in the format "Answer: <answer>".` | none | 1024 |
+| CoT-v2 (robustness) | `Before answering, carefully work through the problem and explain your thought process. When you are done, end your response with one last line of the form "Answer: <answer>".` | none | 1024 |
+
+The prefill in the direct condition forces the model to answer immediately, so "direct" really means no
+visible reasoning. Exact templates are in `src/scoring.py`.
+
+### Tasks
+300 items per task sampled with seed 42 (BBH has only 250; all are used). Total 2,350 items.
+
+| Category | Task | Source | Answer format | Chance |
+|---|---|---|---|---|
+| Pattern matching | AG News topic | fancyzhx/ag_news test | 4 labels | 25% |
+| Pattern matching | SST-2 sentiment | stanfordnlp/sst2 validation | 2 labels | 50% |
+| Factual recall | TriviaQA | rc.nocontext validation | free-form, alias match | ~0% |
+| Factual recall | MMLU, 7 recall-heavy subjects | cais/mmlu test | 4-way multiple choice | 25% |
+| Logical deduction | BBH logical_deduction_five_objects | lukaemon/bbh | 5-way multiple choice | 20% |
+| Logical deduction | ProofWriter, open-world, depth-5 theories | tasksource/proofwriter validation | True / False / Unknown (balanced) | 33% |
+| Arithmetic | GSM8K | openai/gsm8k test | number | ~0% |
+| Arithmetic | Synthetic 3-operation expressions | generated here | integer | ~0% |
+
+The synthetic arithmetic items, e.g. `(125 + 859) * 4 - 93`, were generated for this study, so they cannot
+be in any training set. The MMLU subjects are miscellaneous, world_religions, high_school_geography,
+prehistory, anatomy, nutrition and astronomy.
+
+### Scoring
+The answer is the text after the last "Answer:" / "answer is" marker (first line of the direct output).
+Labels must match exactly one allowed label; multiple choice needs the right letter; numbers are compared
+numerically; TriviaQA uses standard normalisation and alias containment. A CoT response with no parsable
+answer counts as wrong. Analysis re-scores everything from the saved raw outputs.
+
+I audited extraction by reading samples of wrong-scored CoT answers per task (`src/audit_extraction.py`).
+That found one artefact, which is fixed in the reported numbers: the 0.5B model sometimes wrote
+"Science/Tech" for the "Sci/Tech" label (it affected both conditions for that model only). In the other
+samples the model's stated answer was genuinely wrong.
+
+### Statistics (fixed in `planning.md` before the runs)
+- Paired delta per model x task and per model x category (macro-average of the two task deltas), with a
+  95% bootstrap CI over items (10,000 resamples, stratified by task).
+- Exact McNemar test, Holm-corrected within the 40 task-level tests and within the 20 category-level tests,
+  alpha = 0.05.
+- H1/H2 verdict per cell: point estimate inside the stated range and Holm-significant.
+- H3: slope of the category delta on log2(parameters), CI from the item bootstrap; count of significantly
+  helped tasks per model.
+- Added metrics: **harm rate** P(CoT wrong | direct right) and **fix rate** P(CoT right | direct wrong).
+
+### Compute and cost
+4x NVIDIA RTX A6000 (48 GB each), shared with other jobs during the run. Batch sizes 64-96, reduced
+automatically on out-of-memory errors. Inference took about 1 h 50 min wall-clock for the main grid under
+contention (the 14B CoT pass alone took about 55 min). API cost: $0. Mixed precision: bfloat16 weights.
+
+## 4. Results
+
+Raw outputs: `results/model_outputs/*.jsonl`. Tables: `results/*.csv`. Full console output of the
+analysis: `results/analysis_output.txt`.
+
+### 4.1 Category level: CoT minus direct accuracy, in points [95% CI]
+
+`*` marks Holm-significant cells (alpha = 0.05).
+
+| Category | 0.5B | 1.5B | 3B | 7B | 14B | Hypothesised |
+|:--|:--|:--|:--|:--|:--|:--|
+| Pattern matching | -0.7 [-3.2, +1.8] | -1.2 [-3.2, +0.8] | +0.7 [-1.2, +2.5] | -0.2 [-1.5, +1.2] | 0.0 [-1.2, +1.2] | -15 to -5 |
+| Factual recall | -2.2 [-5.8, +1.5] | -0.2 [-3.5, +3.2] | +1.8 [-1.2, +4.8] | +3.8 [+1.2, +6.5] | +2.8 [+0.3, +5.3] | -15 to -5 |
+| Logical deduction | -6.9 [-12.3, -1.5] | +7.2 [+2.2, +12.3] | **+13.9 [+8.8, +18.8]\*** | +26.7 [+21.8, +31.6]* | +28.7 [+24.2, +33.3]* | +10 to +25 |
+| Arithmetic | +47.7 [+43.7, +51.7]* | +77.0 [+73.7, +80.3]* | +84.7 [+81.8, +87.3]* | +85.0 [+82.2, +87.7]* | +81.7 [+78.8, +84.5]* | +10 to +25 |
+
+Only one of the 20 cells (bold) is both inside its hypothesised range and significant.
+
+![CoT effect by category and model size](figures/delta_by_category_scale.png)
+
+### 4.2 Task level: direct accuracy → CoT accuracy (delta), in %
+
+| Task | 0.5B | 1.5B | 3B | 7B | 14B |
+|:--|:--|:--|:--|:--|:--|
+| ag_news | 83.0 → 84.3 (+1.3) | 83.3 → 79.7 (-3.7) | 81.3 → 83.3 (+2.0) | 88.3 → 87.3 (-1.0) | 86.7 → 87.3 (+0.7) |
+| sst2 | 87.7 → 85.0 (-2.7) | 92.0 → 93.3 (+1.3) | 93.3 → 92.7 (-0.7) | 93.7 → 94.3 (+0.7) | 95.7 → 95.0 (-0.7) |
+| triviaqa | 18.7 → 20.3 (+1.7) | 40.0 → 42.7 (+2.7) | 47.3 → 48.7 (+1.3) | 55.0 → 62.0 (+7.0) | 66.0 → 70.0 (+4.0) |
+| mmlu_recall | 48.7 → 42.7 (-6.0) | 69.7 → 66.7 (-3.0) | 75.0 → 77.3 (+2.3) | 83.7 → 84.3 (+0.7) | 86.3 → 88.0 (+1.7) |
+| bbh_logical_deduction | 24.0 → 18.8 (-5.2) | 26.4 → 33.2 (+6.8) | 43.6 → 50.0 (+6.4) | 54.4 → 74.8 (+20.4*) | 64.4 → 86.8 (+22.4*) |
+| proofwriter | 33.3 → 24.7 (-8.7) | 35.7 → 43.3 (+7.7) | 29.7 → 51.0 (+21.3*) | 31.3 → 64.3 (+33.0*) | 39.7 → 74.7 (+35.0*) |
+| gsm8k | 4.3 → 37.3 (+33.0*) | 7.0 → 77.7 (+70.7*) | 14.0 → 89.0 (+75.0*) | 21.7 → 94.7 (+73.0*) | 32.0 → 97.3 (+65.3*) |
+| synthetic_arithmetic | 0.0 → 62.3 (+62.3*) | 0.0 → 83.3 (+83.3*) | 0.0 → 94.3 (+94.3*) | 0.0 → 97.0 (+97.0*) | 0.3 → 98.3 (+98.0*) |
+
+No task shows a Holm-significant CoT penalty at any size. Four cells have uncorrected p < 0.05 but do not
+survive correction: proofwriter 0.5B (-8.7, p = 0.049), ag_news 1.5B (-3.7, p = 0.027), proofwriter 1.5B
+(+7.7, p = 0.038) and triviaqa 7B (+7.0, p = 0.0025, Holm p = 0.061).
+
+![Per-task heatmap](figures/delta_heatmap.png)
+
+![Accuracy by task](figures/accuracy_by_task.png)
+
+### 4.3 Scale trend
+
+| | 0.5B | 1.5B | 3B | 7B | 14B |
+|:--|--:|--:|--:|--:|--:|
+| Tasks (of 8) where CoT significantly helps | 2 | 2 | 3 | 4 | 4 |
+| Tasks where CoT significantly hurts | 0 | 0 | 0 | 0 | 0 |
+| Categories (of 4) where CoT significantly helps | 1 | 1 | 2 | 2 | 2 |
+
+Slope of the CoT delta per doubling of parameters (95% CI):
+
+| Category | Slope (points per doubling) |
+|:--|:--|
+| Pattern matching | +0.2 [-0.3, +0.7] |
+| Factual recall | +1.2 [+0.3, +2.0] |
+| Logical deduction | +7.6 [+6.3, +8.9] |
+| Arithmetic | +6.7 [+5.7, +7.6] |
+
+No slope is negative. The arithmetic slope comes almost entirely from the 0.5B to 1.5B step; from 3B up
+the arithmetic delta is flat to slightly falling (+84.7, +85.0, +81.7).
+
+### 4.4 Harm and fix rates
+
+Harm rate, P(CoT wrong | direct right), in %:
+
+| Category | 0.5B | 1.5B | 3B | 7B | 14B |
+|:--|--:|--:|--:|--:|--:|
+| Pattern matching | 6.1 | 4.4 | 2.7 | 1.6 | 1.3 |
+| Factual recall | 36.1 | 17.0 | 10.6 | 5.5 | 5.0 |
+| Logical deduction | 88.8 | 45.1 | 35.9 | 18.7 | 9.6 |
+| Arithmetic | 61.5 | 9.5 | 0.0 | 3.1 | 1.0 |
+
+Fix rate, P(CoT right | direct wrong), in %:
+
+| Category | 0.5B | 1.5B | 3B | 7B | 14B |
+|:--|--:|--:|--:|--:|--:|
+| Pattern matching | 30.7 | 21.6 | 23.7 | 14.8 | 13.2 |
+| Factual recall | 15.1 | 20.3 | 21.5 | 25.0 | 28.0 |
+| Logical deduction | 26.4 | 31.3 | 42.9 | 60.3 | 69.6 |
+| Arithmetic | 50.1 | 80.1 | 91.0 | 95.7 | 97.6 |
+
+Counts behind these rates are in `results/category_level.csv` (`n_harmed`, `n_fixed`). Two cautions. The
+arithmetic harm rates rest on very few items, because few arithmetic items are right in the direct
+condition (8 harmed items at 0.5B, 0-2 elsewhere). And part of every harm and fix rate is run-to-run churn
+rather than a CoT effect (section 6), so the net effect (the delta) is the safer number.
+
+![Harm and fix rates](figures/harm_fix_rates.png)
+
+### 4.5 Output diagnostics and token cost
+
+Mean output tokens per item were 3.1-3.3 for direct and 222-271 for CoT, a ratio of 71x to 87x
+(`results/token_cost.csv`).
+
+CoT responses carried an explicit final-answer marker and finished within budget in at least 95% of
+cases for every model-task pair, with two exceptions on the smallest models. On synthetic arithmetic the
+0.5B model omitted the marker in 24% of responses (it ended with a boxed number, which the fallback parser
+reads). On ProofWriter the small models often ran out of budget. Share of ProofWriter CoT responses that hit the
+1,024-token budget without finishing: 44.0% (0.5B), 10.7% (1.5B), 5.0% (3B), 0.3% (7B), 0% (14B).
+
+**Sensitivity analysis.** Restricting to items whose CoT response was well-formed changes one cell
+materially: logical deduction at 0.5B moves from -6.9 to +3.7 (n = 407 of 550, CI [-3.8, +11.1]). All
+other cells move by less than 2 points (`results/sensitivity_clean_cot.csv`). This subset is selected on
+the outcome of the CoT run, so it shows where the loss comes from; it is not an unbiased estimate of
+what CoT would do with a larger budget.
+
+### 4.6 Prompt robustness (second CoT wording)
+
+On the first 100 items of each task, the paraphrased CoT instruction gave the same picture
+(`results/robustness_cot2.csv`). Across the 19 available model-by-category cells, the correlation between
+the two wordings' deltas was 0.996. Signs agreed in 16 of 19 cells; the three disagreements were all cells
+where both deltas were within 4 points of zero.
+
+This check is incomplete for the 14B model: its CoT-v2 run was repeatedly killed by out-of-memory errors
+on the shared GPUs and finished 544 of 800 items, with no logical-deduction items. The 14B rows cover
+pattern matching (n = 178), factual recall (n = 175) and arithmetic (n = 191) only.
+
+One thing to flag: with wording 2, pattern matching shows small negative deltas whose CIs exclude zero for
+three models (0.5B: -2.5 [-5.0, -0.5]; 1.5B: -2.5 [-5.0, -0.5]; 14B: -2.3 [-4.7, -0.5]) and a positive one
+for 3B (+3.5 [+0.5, +7.0]). These are uncorrected, on 200 or fewer items, and mixed in sign, so I read
+them as an upper bound on any classification penalty of roughly 2-5 points, not as evidence for one.
+
+## 5. Analysis & Discussion
+
+### H1 (CoT costs 5-15 points on pattern matching and factual recall): not supported
+None of the ten cells is in the range and none is significantly negative. For pattern matching the lower
+CI bound is no worse than -3.2 at any size, so a 5-point tax is excluded for the main prompt. For factual
+recall a 5-point tax is excluded from 1.5B up; at 0.5B the CI [-5.8, +1.5] just reaches it. At 7B and 14B
+recall moves slightly in CoT's favour (+3.8 and +2.8, uncorrected CIs exclude zero, not significant after
+Holm correction), driven by TriviaQA.
+
+The closest thing to H1 is the smallest model on MMLU recall (-6.0 points, CI [-13.0, +1.0], not
+significant). Error examples show what a real recall failure under CoT looks like when it happens: the
+0.5B model, asked for the term for a tribe with no set homeland, reasoned its way from the obvious
+"Nomadic" to "Schematic"; the 14B model talked itself from "Sci/Tech" to "Business" for an article about
+Microsoft entering online music. These happen, but at 14B they are balanced by fixes (pattern matching: 7
+harmed, 7 fixed; recall: 23 harmed, 40 fixed).
+
+### H2 (CoT adds 10-25 points on logic and arithmetic): direction supported, magnitude not
+Arithmetic gains are 2 to 8 times larger than the hypothesised range. This depends heavily on how strict
+the direct condition is: with the answer prefilled, models cannot do any visible working, and direct
+accuracy on three-operation arithmetic is 0%. A looser "be concise" baseline would shrink the gap.
+
+Logical deduction is in range only at 3B (+13.9). It is negative at 0.5B, below range at 1.5B, and above
+range at 7B and 14B.
+
+### H3 (fewer categories benefit as scale grows): not supported, trend is the opposite
+More tasks benefit at larger sizes (2 → 4 of 8), all four slopes are non-negative, and harm rates fall
+with size in every category. Within this range, larger models are better at using an explicit trace, not
+more disrupted by it. ProofWriter makes the point: direct accuracy stays near chance (30-40%) at every
+size, while CoT accuracy climbs from 25% to 75%.
+
+### The "internalised reasoning" clause
+The data give one pattern that resembles it: on GSM8K the CoT gain peaks at 3B (+75.0) and falls to +65.3
+at 14B, because direct accuracy keeps rising (14% → 32%) while CoT accuracy is near its ceiling (89% →
+97%). That is larger models doing more of the arithmetic without a trace. But it is a shrinking benefit
+caused by a ceiling, not a trace disrupting anything: CoT is still 65 points ahead. Whether the gain keeps
+shrinking, or turns negative, in much larger models is untested here.
+
+### What actually goes wrong when CoT hurts
+The only clearly negative cell is logical deduction at 0.5B. Of the 142 items the 0.5B model got right
+directly and wrong with CoT, 48 were truncated runs: the model restated rule after rule until the token
+budget ran out (`results/harm_failure_modes.csv`). The remaining 93 gave a wrong final answer. Since the
+0.5B model's direct accuracy on these tasks is at chance (24% and 33%), most of those "correct" direct
+answers were lucky guesses, so losing them is not strong evidence of disrupted reasoning. The honest
+reading is that a very small model cannot carry out the reasoning, and attempting it costs a few points
+through runaway outputs.
+
+### Surprises
+- Direct ProofWriter accuracy barely moves with scale (33% → 40%). The 14B model answers "Unknown" for
+  about two thirds of items when it cannot reason visibly.
+- Fix rate on pattern matching *falls* with size (31% → 13%) while it rises elsewhere; with direct
+  accuracy at 91%, the remaining errors are probably mostly label ambiguity that reasoning cannot resolve.
+
+## 6. Limitations
+
+- **One model family, maximum 14B.** The hypothesis is about scale in general; these results cover
+  0.5B-14B Qwen2.5 only. Frontier models were not tested, and the claim that very large models are
+  disrupted by traces remains open.
+- **Not bit-reproducible at the item level.** Batched bfloat16 generation depends slightly on batch
+  composition. Re-running 128 items per model in different batches (pilot vs main run) gave identical CoT
+  text for only about 25% of items; item-level correctness agreed for 85% (0.5B) and 95% (14B) of CoT
+  items and 99% of direct items. Aggregate accuracies should be unaffected in expectation, but the
+  bootstrap CIs (which resample items only) understate total uncertainty somewhat, and harm/fix rates
+  include this churn. I did not run repeated full passes to quantify it.
+- **Strict direct baseline.** Prefilling "Answer:" removes all visible reasoning. This is the cleanest
+  contrast but inflates arithmetic gains relative to how people usually prompt.
+- **Category assignment is a judgement call.** "Pattern matching" here means text classification, which
+  the models do near ceiling (83-96%). Tasks where implicit pattern learning is the point (as in Liu et
+  al. 2024) were not included and might behave differently. Ceiling limits how much could be gained on
+  SST-2, though not how much could be lost.
+- **Token budget.** 1,024 tokens truncated 44% of the 0.5B model's ProofWriter responses; a larger budget
+  might change that cell.
+- **Contamination.** All public benchmarks may be in training data; this affects both conditions. The
+  synthetic arithmetic task is the only contamination-free one.
+- **Sample size.** 250-300 items per task gives per-task CIs of roughly ±3 to ±8 points; effects smaller
+  than about 3 points per category cannot be resolved. The prompt-robustness check used 100 items per
+  task and is incomplete for 14B.
+- **Zero-shot only, greedy only, English only.** Few-shot CoT and sampling were not tested.
+- **Literature context from memory**, since no review was pre-gathered.
+
+## 7. Conclusions & Next Steps
+
+**Answer.** In Qwen2.5-Instruct from 0.5B to 14B, zero-shot CoT did not reduce accuracy on text
+classification or factual recall (effects between -2.2 and +3.8 points, none significantly negative),
+improved arithmetic by 48-85 points and logical deduction by up to 29 points, and helped more tasks, not
+fewer, as model size grew. The "CoT tax" in this setting is the roughly 75x output-token cost for no gain
+on classification, plus a real accuracy loss only for the smallest model on multi-step logic.
+
+**Follow-ups, in order of value:**
+1. Repeat on frontier API models (and a second open family) to test whether the GSM8K-style shrinking
+   benefit turns into an actual penalty at larger scale.
+2. Add tasks designed around implicit pattern learning, where prior work reports real CoT harm.
+3. Run 3-5 repeated passes (or sampling with several seeds) to measure run-to-run variance and put proper
+   error bars on harm and fix rates.
+4. Add a "concise answer, no prefill" baseline to see how much of the arithmetic gap is due to the strict
+   direct condition.
+5. Raise the token budget for the smallest models to separate "cannot reason" from "ran out of room".
+
+## References
+
+- Wei et al. (2022). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.
+- Kojima et al. (2022). Large Language Models are Zero-Shot Reasoners.
+- Sprague et al. (2024). To CoT or not to CoT? Chain-of-thought helps mainly on math and symbolic reasoning.
+- Liu et al. (2024). Mind Your Step (by Step): Chain-of-Thought can Reduce Performance on Tasks where Thinking Makes Humans Worse.
+- Datasets: AG News (Zhang et al. 2015), SST-2 (Socher et al. 2013), TriviaQA (Joshi et al. 2017), MMLU
+  (Hendrycks et al. 2021), BIG-Bench Hard (Suzgun et al. 2022), ProofWriter (Tafjord et al. 2021), GSM8K
+  (Cobbe et al. 2021).
+- Models: Qwen2.5-Instruct (Alibaba Cloud, 2024). Tools: PyTorch, Hugging Face Transformers, SciPy,
+  statsmodels, matplotlib.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Planning: The Chain-of-Thought Tax
+
+## Motivation & Novelty Assessment
+
+### Why This Research Matters
+Chain-of-thought (CoT) prompting is applied almost by default, yet it costs 10-50x more output tokens than
+a direct answer. If CoT also *lowers* accuracy on some task types, practitioners are paying twice. Knowing
+which task categories benefit, which are taxed, and how that changes with model size lets people route
+prompts sensibly instead of using CoT everywhere.
+
+### Gap in Existing Work
+No pre-gathered literature review was present in the workspace (the resource-finder stage was skipped), so
+this is from my own knowledge of the literature rather than a systematic review:
+- Wei et al. 2022 and Kojima et al. 2022 established CoT gains, mostly on arithmetic/symbolic tasks.
+- Sprague et al. 2024 ("To CoT or not to CoT?") meta-analysed 100+ papers and found gains concentrated on
+  math/symbolic tasks, with near-zero benefit elsewhere - but mostly reports "no gain", not harm.
+- Liu et al. 2024 ("Mind Your Step (by Step)") show CoT *hurts* on tasks where verbal deliberation hurts
+  humans (implicit pattern learning, etc.).
+- Most comparisons mix model families, so "scale" is confounded with training data and recipe.
+
+Missing: a controlled *within-family* scale ladder, with paired item-level statistics, that separates
+"CoT gives no gain" from "CoT actively breaks answers the model otherwise gets right".
+
+### Our Novel Contribution
+A paired direct-vs-CoT comparison over 4 task categories x 2 datasets each, on five sizes of one model
+family (Qwen2.5-Instruct 0.5B-14B, a 30x parameter range), reporting not only the accuracy delta but the
+*harm rate* P(CoT wrong | direct right) and *fix rate* P(CoT right | direct wrong), which are not
+distorted by ceiling effects the way raw deltas are.
+
+### Experiment Justification
+- Exp 1 (main grid: 5 models x 8 tasks x {direct, CoT}): directly tests the sign and size of the CoT
+  effect per category (H1, H2).
+- Exp 2 (scale trend): slope of the CoT delta against log2(parameters) per category tests the claimed
+  shift of the crossover with scale (H3).
+- Exp 3 (prompt-paraphrase robustness: a second CoT wording): greedy decoding has no seed variance, so
+  prompt wording is the relevant nuisance variable; checks that conclusions are not one prompt's artefact.
+- Exp 4 (error analysis: harm/fix rates, parse failures, truncation, reasoning length): distinguishes a
+  real reasoning tax from formatting/extraction artefacts.
+
+## Research Question
+Does zero-shot CoT lower accuracy on pattern-matching and factual-recall tasks (by 5-15 points) while
+raising it on logical deduction and arithmetic (by 10-25 points), and does the set of categories that
+benefit shrink as model scale grows?
+
+## Hypothesis Decomposition
+- H1: For pattern matching and factual recall, delta = acc(CoT) - acc(direct) lies in [-15, -5] pp.
+- H2: For logical deduction and arithmetic, delta lies in [+10, +25] pp.
+- H3: As parameters increase, fewer categories show a positive delta (deltas trend downward with scale).
+- (Mechanistic clause "larger models internalise reasoning that traces disrupt" is NOT directly testable
+  with behavioural data; at most the results can be consistent or inconsistent with it.)
+"5-15%" is read as percentage points of accuracy; relative changes are reported alongside.
+
+Independent variables: prompt condition (direct / CoT), task category, model size.
+Dependent variable: item-level correctness (0/1).
+
+## Proposed Methodology
+
+### Approach
+The environment has no API key (OPENROUTER_KEY and all provider keys are unset), so API models are not
+available. Instead I run real open-weight models locally on the 4x RTX A6000. This is a deviation from the
+default instruction, but it gives a cleaner test of the scale claim: one family, one training recipe, five
+sizes. Models: Qwen2.5-{0.5B, 1.5B, 3B, 7B, 14B}-Instruct (already in the local HF cache; larger sizes are
+not cached and the data disk has ~6 GB free, so 14B is the ceiling).
+
+### Tasks (n = 300 items each, fixed seed 42)
+| Category | Task | Source | Format |
+|---|---|---|---|
+| Pattern matching | AG News topic | fancyzhx/ag_news test | 4 labels |
+| Pattern matching | SST-2 sentiment | stanfordnlp/sst2 validation | 2 labels |
+| Factual recall | TriviaQA | rc.nocontext validation | free-form, alias match |
+| Factual recall | MMLU recall-heavy subjects | cais/mmlu test | 4-way MCQ |
+| Logical deduction | BBH logical_deduction_five_objects | lukaemon/bbh (250 items, all used) | 5-way MCQ |
+| Logical deduction | ProofWriter OWA depth-5 | tasksource/proofwriter validation | True/False/Unknown |
+| Arithmetic | GSM8K | openai/gsm8k test | number |
+| Arithmetic | Synthetic multi-step arithmetic | generated here (contamination-free) | number |
+
+### Conditions
+- Direct: instruction to give only the answer; the assistant turn is prefilled with "Answer:" and capped
+  at 24 new tokens, so the model cannot reason in the output.
+- CoT: "think step by step", then a final "Answer: ..." line; 640 new tokens.
+- CoT-v2 (robustness): a differently worded reasoning instruction.
+Zero-shot, greedy decoding (temperature 0), default system prompt, identical items across conditions.
+
+### Baselines
+Direct answering is the baseline for CoT. Chance levels per task are reported (25%, 50%, 20%, 33%, ~0%).
+
+### Evaluation Metrics
+Accuracy; paired delta (CoT - direct); harm rate; fix rate; parse-failure and truncation rates; output
+tokens (the literal cost side of the "tax").
+
+### Statistical Analysis Plan (fixed before seeing results)
+- Per model x task and per model x category: paired bootstrap 95% CI on delta (10,000 resamples of items),
+  exact McNemar test, Holm correction across the family of tests at alpha = 0.05.
+- H1/H2 are judged per model x category: supported if the point estimate is inside the stated band and the
+  CI excludes 0 in the predicted direction.
+- H3: OLS slope of category delta on log2(params), CI by item bootstrap; plus the count of categories/tasks
+  with a significantly positive delta at each size.
+- CoT answers with no parsable final answer count as wrong (reported separately, with a sensitivity
+  analysis that excludes them).
+
+## Expected Outcomes
+Support: negative deltas on classification/recall, positive on logic/arithmetic, positive deltas shrinking
+with size. Refutation: deltas near zero or positive on recall/pattern tasks; no monotone scale trend.
+
+## Timeline
+Setup and data 30 min; harness + pilot 40 min; full runs ~60 min on 4 GPUs; analysis 40 min; report 30 min.
+
+## Potential Challenges
+- Small models ignoring the output format -> track parse failures, sensitivity analysis.
+- Ceiling effects on SST-2 -> harm/fix rates.
+- Truncated CoT -> 640-token budget, report truncation rate.
+- Disk nearly full -> venv symlinked to the uv cache, only small parquet files downloaded.
+
+## Success Criteria
+All 5 models x 8 tasks x 2 conditions completed with item-level outputs saved; each sub-hypothesis gets an
+explicit supported / not supported verdict with CIs.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+No literature_review.md found
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. AUTHOR
+   - Use this exact author line in the \author{} block: NeuriCo
+
+3. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+4. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+5. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+6. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+7. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+8. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+9. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+10. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   \author{NeuriCo}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Command templates are pre-copied to paper_draft/commands/:
+   - math.tex: Math notation macros
+   - general.tex: Formatting macros
+   - macros.tex: Project-specific term definitions (customize this for your paper)
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read .claude/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

@@ -1,0 +1,69 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\para{What is the chain-of-thought tax?}
+In this family, the cost of \CoT on recognition and recall tasks is tokens, not accuracy.
+For classification, \CoT spends roughly 75$\times$ more output tokens for no measurable change.
+For recall it buys at most a few points at the larger sizes.
+Routing prompts by task type is therefore justified here on cost grounds, but not as protection against a loss of accuracy.
+
+\para{Why does H2 miss on magnitude?}
+The arithmetic gap depends on how strict the baseline is.
+We prefill the answer, so the model can do no visible working at all, and three-operation arithmetic then fails almost every time.
+A looser ``be concise'' baseline without prefill would likely shrink the gap; we did not test it.
+
+\para{Do larger models ``internalise'' reasoning that traces disrupt?}
+The original hypothesis ends with this mechanism claim, which accuracy data cannot test directly.
+One pattern resembles it: on \gsm the \CoT gain shrinks from $+75.0$ at 3B to $+65.3$ at 14B as direct accuracy rises.
+Larger models do more of the arithmetic without a trace.
+But this is a shrinking benefit under a ceiling, not a trace disrupting anything; \CoT is still 65 points ahead at 14B.
+Everything else points the other way: harm rates fall with size, and larger models make better use of an explicit trace on logic.
+Whether the gain keeps shrinking, or turns negative, in much larger models is untested here.
+
+\para{What goes wrong when \CoT hurts?}
+The only category-level cell with a negative interval is logical deduction at 0.5B, and it is not significant after correction (Holm $p = 0.15$).
+About a third of the harmed items are runaway outputs that hit the token budget (\secref{sec:diag}).
+For the rest, the 0.5B model's direct accuracy on these tasks is at chance (24.0\% and 33.3\%), so most of its ``correct'' direct answers are likely lucky guesses, and losing them is weak evidence of disrupted reasoning.
+Our reading is that a very small model cannot carry out the reasoning, and attempting it costs a few points through runaway outputs.
+
+Individual harms on easy tasks do occur.
+Asked for the term for a tribe with no set homeland, the 0.5B model reasoned from the obvious ``Nomadic'' to ``Schematic''.
+The 14B model talked itself from ``Sci/Tech'' to ``Business'' for an article about Microsoft entering online music.
+At 14B such cases are balanced or outnumbered by fixes: 7 harmed and 7 fixed items for pattern matching, 23 harmed and 40 fixed for recall.
+
+\para{Two observations we did not expect.}
+Direct accuracy on \proofwriter barely moves with scale (33.3\% to 39.7\%); the 14B model answers ``Unknown'' for about two thirds of items when it cannot reason visibly.
+And the fix rate on pattern matching falls with size (30.7\% to 13.2\%) while it rises elsewhere.
+With direct accuracy near 91\% at 14B, we suspect the remaining errors are mostly ambiguous labels that reasoning cannot resolve, but we have not checked this.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+\para{One family, at most 14B parameters.}
+The hypothesis concerns scale in general. Our results cover Qwen2.5 from 0.5B to 14B only. We did not test frontier models, and the claim that very large models are disrupted by traces remains open.
+
+\para{Not bit-reproducible at the item level.}
+Batched bfloat16 generation depends slightly on batch composition.
+Re-running 128 items per model in different batches gave identical \CoT text for only about 25\% of items; item-level correctness agreed for 85\% (0.5B) and 95\% (14B) of \CoT items and 99\% of direct items.
+Our bootstrap intervals resample items only, so they understate total uncertainty somewhat, and harm and fix rates include this churn.
+We did not run repeated full passes to quantify it.
+
+\para{Strict direct baseline.}
+Prefilling ``Answer:'' removes all visible reasoning. This gives the cleanest contrast but inflates arithmetic gains relative to common prompting practice.
+
+\para{Category assignment.}
+``Pattern matching'' here means text classification, which these models perform at 83--96\%.
+We did not include tasks built around implicit pattern learning, where prior work reports real harm from \CoT \cite{liu2024mind}; they may behave differently.
+The ceiling on \sst limits how much \CoT could gain, though not how much it could lose.
+
+\para{Token budget.}
+The 1,024-token limit truncated 44\% of the 0.5B model's \proofwriter responses; a larger budget might change that cell.
+
+\para{Sample size and robustness.}
+With 250--300 items per task, task-level intervals span roughly $\pm 3$ to $\pm 8$ points, and we cannot resolve category effects smaller than about 3 points.
+The prompt-robustness check uses 100 items per task, is incomplete for 14B, and covers only one paraphrase.
+
+\para{Other scope limits.}
+All public benchmarks may appear in training data, which affects both conditions; \synth is the only contamination-free task.
+We test zero-shot prompting, greedy decoding and English only.
+Finally, our account of prior work rests on four papers we knew in advance and not on a systematic review.

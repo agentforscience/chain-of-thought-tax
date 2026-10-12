@@ -1,0 +1,22 @@
+\section{Related Work}
+\label{sec:related}
+
+We did not run a systematic literature search for this study; this section positions our work against the papers that motivated it.
+
+\para{Chain-of-thought prompting.}
+\citet{wei2022chain} show that few-shot exemplars containing intermediate reasoning steps improve performance on arithmetic, commonsense and symbolic tasks, and \citet{kojima2022large} show that a single zero-shot instruction to think step by step yields similar gains.
+We use the zero-shot form, because it is what practitioners apply by default and it needs no task-specific exemplars.
+
+\para{Where \CoT helps.}
+\citet{sprague2024cot} conduct a large meta-analysis and new experiments and find that \CoT gains concentrate on math and symbolic reasoning, with little benefit elsewhere.
+Their finding for other tasks is mainly an absence of gain.
+Building on this, we ask the sharper question of whether \CoT is \emph{harmful} on recognition and recall tasks, and we use paired item-level outcomes to separate a null effect from offsetting harms and fixes.
+
+\para{Where \CoT hurts.}
+\citet{liu2024mind} show that \CoT can reduce performance on tasks where verbal deliberation makes humans worse, such as implicit pattern learning.
+Unlike their task selection, our ``pattern matching'' category consists of standard text classification, which models already solve near ceiling.
+Our null result on classification therefore does not contradict theirs; it shows that the harm they find does not extend to ordinary classification in the models we test.
+
+\para{Scale.}
+Most comparisons of \CoT across model sizes span different families, so scale is confounded with training data and recipe.
+We hold the family fixed and vary only size, using the five smallest instruction-tuned sizes of Qwen2.5 \cite{qwen2024qwen25}.
